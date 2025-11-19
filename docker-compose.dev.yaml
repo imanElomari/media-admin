@@ -103,10 +103,6 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
     networks:
       - postiz-network
-    depends_on:
-      - postiz-atlasimex
-      - postiz-promax
-      - postiz-x6drinks
 
 # --- Volumes ---
 volumes:
