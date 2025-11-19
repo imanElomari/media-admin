@@ -7,9 +7,9 @@ services:
     container_name: postiz-postgres
     restart: always
     environment:
-      POSTGRES_USER: postiz_user
-      POSTGRES_PASSWORD: Postiz123!
-      POSTGRES_DB: postiz_db
+      POSTGRES_USER: media_admin
+      POSTGRES_PASSWORD: admin1234!
+      POSTGRES_DB: media_db
     volumes:
       - postgres-volume:/var/lib/postgresql/data
     networks:
