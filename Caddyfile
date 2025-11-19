@@ -1,0 +1,11 @@
+mediaadmin.atlasimex.es {
+    reverse_proxy postiz-atlasimex:5000
+}
+
+mediaadmin.promaxdrinks.com {
+    reverse_proxy postiz-promax:5000
+}
+
+mediaadmin.x6drinks.com {
+    reverse_proxy postiz-x6drinks:5000
+}

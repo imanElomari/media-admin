@@ -1,0 +1,121 @@
+version: "3.9"
+
+services:
+  # --- PostgreSQL Database ---
+  postiz-postgres:
+    image: postgres:17-alpine
+    container_name: postiz-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postiz_user
+      POSTGRES_PASSWORD: Postiz123!
+      POSTGRES_DB: postiz_db
+    volumes:
+      - postgres-volume:/var/lib/postgresql/data
+    networks:
+      - postiz-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postiz_user -d postiz_db"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # --- Redis ---
+  postiz-redis:
+    image: redis:7.2
+    container_name: postiz-redis
+    restart: always
+    volumes:
+      - postiz-redis-data:/data
+    networks:
+      - postiz-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # --- Atlasimex ---
+  postiz-atlasimex:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        BRAND_TITLE: "${BRAND_TITLE:-Atlasimex Media}"
+        BRAND_LOGO: "${BRAND_LOGO:-branding/atlasimex.png}"
+    container_name: postiz-atlasimex
+    restart: always
+    env_file:
+      - .env.atlasimex
+    networks:
+      - postiz-network
+    depends_on:
+      - postiz-postgres
+      - postiz-redis
+
+  # --- Promax ---
+  postiz-promax:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        BRAND_TITLE: "${BRAND_TITLE:-Promax Media}"
+        BRAND_LOGO: "${BRAND_LOGO:-branding/promax.png}"
+    container_name: postiz-promax
+    restart: always
+    env_file:
+      - .env.promax
+    networks:
+      - postiz-network
+    depends_on:
+      - postiz-postgres
+      - postiz-redis
+
+  # --- X6Drinks ---
+  postiz-x6drinks:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        BRAND_TITLE: "${BRAND_TITLE:-X6Drinks Media}"
+        BRAND_LOGO: "${BRAND_LOGO:-branding/x6drinks.png}"
+    container_name: postiz-x6drinks
+    restart: always
+    env_file:
+      - .env.x6drinks
+    networks:
+      - postiz-network
+    depends_on:
+      - postiz-postgres
+      - postiz-redis
+
+  # --- Caddy Reverse Proxy ---
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    networks:
+      - postiz-network
+    depends_on:
+      - postiz-atlasimex
+      - postiz-promax
+      - postiz-x6drinks
+
+# --- Volumes ---
+volumes:
+  postgres-volume:
+  postiz-redis-data:
+  caddy-data:
+  caddy-config:
+
+# --- Network ---
+networks:
+  postiz-network:
+    driver: bridge
