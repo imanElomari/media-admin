@@ -6,6 +6,7 @@ import Image from 'next/image';
 import clsx from 'clsx';
 import loadDynamic from 'next/dynamic';
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
+import { BRAND_TITLE, BRAND_LOGO } from '../../../lib/branding';
 const ReturnUrlComponent = loadDynamic(() => import('./return.url.component'));
 export default async function AuthLayout({
   children,
@@ -59,7 +60,7 @@ export default async function AuthLayout({
                     />
                   </svg>
                 ) : (
-                  <div className="text-[40px]">{t('gitroom', 'Gitroom')}</div>
+                  <div className="text-[40px]">{BRAND_TITLE}</div>
                 )}
               </div>
             </div>

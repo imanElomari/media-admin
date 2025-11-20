@@ -18,6 +18,7 @@ import { FacebookComponent } from '@gitroom/frontend/components/layout/facebook.
 import { headers } from 'next/headers';
 import { headerName } from '@gitroom/react/translation/i18n.config';
 import { HtmlComponent } from '@gitroom/frontend/components/layout/html.component';
+import { BRAND_TITLE, BRAND_LOGO } from '../../lib/branding';
 // import dynamicLoad from 'next/dynamic';
 // const SetTimezone = dynamicLoad(
 //   () => import('@gitroom/frontend/components/layout/set.timezone'),
@@ -40,7 +41,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <html>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <title>{BRAND_TITLE}</title>
+        <meta name="og:title" content={BRAND_TITLE} />
+        <meta name="twitter:title" content={BRAND_TITLE} />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href={BRAND_LOGO} sizes="any" />
+        <meta name="theme-color" content="#ffffff" />
       </head>
       <body
         className={clsx(jakartaSans.className, 'dark text-primary !bg-primary')}

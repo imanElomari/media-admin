@@ -27,6 +27,7 @@ import { ContinueProvider } from '@gitroom/frontend/components/layout/continue.p
 import { CopilotKit } from '@copilotkit/react-core';
 import { Impersonate } from '@gitroom/frontend/components/layout/impersonate';
 import clsx from 'clsx';
+import { BRAND_TITLE, BRAND_LOGO } from '../../lib/branding';
 import { BillingComponent } from '@gitroom/frontend/components/billing/billing.component';
 import dynamic from 'next/dynamic';
 import { NewSubscription } from '@gitroom/frontend/components/layout/new.subscription';
@@ -95,12 +96,7 @@ export const LayoutSettings = ({ children }: { children: ReactNode }) => {
                 className="text-2xl flex items-center gap-[10px] text-textColor order-1"
               >
                 <div className="min-w-[55px]">
-                  <Image
-                    src={isGeneral ? '/postiz.svg' : '/logo.svg'}
-                    width={55}
-                    height={53}
-                    alt="Logo"
-                  />
+                  <Image src={BRAND_LOGO} width={55} height={53} alt={BRAND_TITLE} />
                 </div>
                 <div
                   className={clsx(!isGeneral ? 'mt-[12px]' : 'min-w-[80px]')}
@@ -131,7 +127,7 @@ export const LayoutSettings = ({ children }: { children: ReactNode }) => {
                       />
                     </svg>
                   ) : (
-                    'Gitroom'
+                    BRAND_TITLE
                   )}
                 </div>
               </Link>

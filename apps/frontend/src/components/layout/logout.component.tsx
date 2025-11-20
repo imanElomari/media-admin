@@ -6,6 +6,7 @@ import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { setCookie } from '@gitroom/frontend/components/layout/layout.context';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { BRAND_TITLE } from '../../lib/branding';
 export const LogoutComponent = () => {
   const fetch = useFetch();
   const { isGeneral, isSecured } = useVariables();
@@ -33,8 +34,7 @@ export const LogoutComponent = () => {
   }, []);
   return (
     <div className="text-red-400 cursor-pointer" onClick={logout}>
-      {t('logout_from', 'Logout from')}
-      {isGeneral ? ' Postiz' : ' Gitroom'}
+  {t('logout_from', 'Logout from')} {BRAND_TITLE}
     </div>
   );
 };

@@ -6,6 +6,7 @@ import LayoutContext from '@gitroom/frontend/components/layout/layout.context';
 import { ReactNode } from 'react';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import clsx from 'clsx';
+import { BRAND_TITLE, BRAND_LOGO } from '../../lib/branding';
 import { VariableContextComponent } from '@gitroom/react/helpers/variable.context';
 import UtmSaver from '@gitroom/helpers/utils/utm.saver';
 
@@ -19,7 +20,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <html>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <title>{BRAND_TITLE}</title>
+        <meta name="og:title" content={BRAND_TITLE} />
+        <meta name="twitter:title" content={BRAND_TITLE} />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href={BRAND_LOGO} sizes="any" />
       </head>
       <body className={clsx(jakartaSans.className, 'dark text-primary !bg-primary')}>
         <VariableContextComponent

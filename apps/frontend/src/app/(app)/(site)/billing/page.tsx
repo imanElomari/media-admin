@@ -2,8 +2,9 @@ export const dynamic = 'force-dynamic';
 import { BillingComponent } from '@gitroom/frontend/components/billing/billing.component';
 import { Metadata } from 'next';
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
+import { BRAND_TITLE } from '../../../lib/branding';
 export const metadata: Metadata = {
-  title: `${isGeneralServerSide() ? 'Postiz' : 'Gitroom'} Billing`,
+  title: `${BRAND_TITLE} Billing`,
   description: '',
 };
 export default async function Page() {
