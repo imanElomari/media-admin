@@ -74,7 +74,7 @@ fi
 echo ""
 echo "Verifying build configuration..."
 
-build_count=$(grep -c "^  .*build:" docker-compose.dev.yaml || true)
+build_count=$(grep -c "^[[:space:]]*build:" docker-compose.dev.yaml || true)
 if [ "$build_count" -eq 1 ]; then
     echo "✅ Only one service is configured to build the image"
 else

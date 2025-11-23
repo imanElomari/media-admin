@@ -34,6 +34,7 @@ services:
       retries: 3
 
   # --- Postiz App (Single image, multiple instances) ---
+  # First service builds the image, others reuse it
   postiz-atlasimex:
     build:
       context: .
