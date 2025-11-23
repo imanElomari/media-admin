@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { getAppName } from '@gitroom/helpers/utils/get.app.name';
 
 export const metadata: Metadata = {
-  title: 'Postiz - Agent',
+  title: `${getAppName()} - Agent`,
   description: '',
 };
 

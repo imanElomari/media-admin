@@ -6,6 +6,7 @@ import Image from 'next/image';
 import clsx from 'clsx';
 import loadDynamic from 'next/dynamic';
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
+import { getAppLogo } from '@gitroom/helpers/utils/get.app.logo';
 const ReturnUrlComponent = loadDynamic(() => import('./return.url.component'));
 export default async function AuthLayout({
   children,
@@ -23,7 +24,7 @@ export default async function AuthLayout({
           <div className="w-full relative">
             <div className="custom:fixed custom:text-start custom:left-[20px] custom:justify-start custom:top-[20px] absolute -top-[100px] text-textColor justify-center items-center w-full flex gap-[10px]">
               <Image
-                src={isGeneralServerSide() ? '/postiz.svg' : '/logo.svg'}
+                src={getAppLogo()}
                 width={55}
                 height={53}
                 alt="Logo"
