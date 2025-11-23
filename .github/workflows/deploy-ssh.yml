@@ -1,7 +1,7 @@
 ---
 name: "Deploy to Server via SSH"
 
-on:
+"on":
   push:
     branches:
       - main
@@ -12,7 +12,7 @@ jobs:
   build:
     name: Build Application
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -50,7 +50,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: success()
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,56 +62,75 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p ${{ secrets.SSH_PORT || 22 }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ secrets.SSH_PORT || 22 }} \
+            -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
       - name: Test SSH connection
         run: |
-          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || 22 }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
+          ssh -i ~/.ssh/deploy_key \
+            -p ${{ secrets.SSH_PORT || 22 }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "echo 'SSH connection successful'"
 
       - name: Sync codebase to remote server
         run: |
+          DEPLOY_TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
+          DEPLOY_TARGET="${DEPLOY_TARGET}:${{ secrets.DEPLOY_PATH }}/"
           rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || 22 }} -o StrictHostKeyChecking=no" \
+            -e "ssh -i ~/.ssh/deploy_key \
+              -p ${{ secrets.SSH_PORT || 22 }} \
+              -o StrictHostKeyChecking=no" \
             --exclude '.git' \
             --exclude 'node_modules' \
             --exclude 'dist' \
             --exclude '.env' \
             --exclude 'uploads' \
             --exclude 'var' \
-            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
+            ./ "${DEPLOY_TARGET}"
 
       - name: Deploy on remote server
         run: |
-          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || 22 }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+          ssh -i ~/.ssh/deploy_key \
+            -p ${{ secrets.SSH_PORT || 22 }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
-            
+
             echo "📦 Installing dependencies..."
             pnpm install --frozen-lockfile
-            
+
             echo "🔨 Generating Prisma client..."
             pnpm run prisma-generate
-            
+
             echo "🏗️ Building application..."
             NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
-            
+
             echo "🔄 Restarting Supervisor service..."
-            sudo supervisorctl restart ${{ secrets.SUPERVISOR_SERVICE_NAME }} || sudo supervisorctl start ${{ secrets.SUPERVISOR_SERVICE_NAME }}
-            
+            sudo supervisorctl restart \
+              ${{ secrets.SUPERVISOR_SERVICE_NAME }} || \
+              sudo supervisorctl start \
+              ${{ secrets.SUPERVISOR_SERVICE_NAME }}
+
             echo "✅ Deployment completed successfully"
           ENDSSH
 
       - name: Check deployment status
         id: check_deployment
         run: |
-          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || 22 }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+          ssh -i ~/.ssh/deploy_key \
+            -p ${{ secrets.SSH_PORT || 22 }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
-            
+
             echo "Checking Supervisor service status..."
-            SERVICE_STATUS=$(sudo supervisorctl status ${{ secrets.SUPERVISOR_SERVICE_NAME }} | awk '{print $2}')
+            SERVICE_STATUS=$(sudo supervisorctl status \
+              ${{ secrets.SUPERVISOR_SERVICE_NAME }} | awk '{print $2}')
             echo "SERVICE_STATUS=$SERVICE_STATUS" >> $GITHUB_OUTPUT
-            
+
             if [ "$SERVICE_STATUS" = "RUNNING" ]; then
               echo "✅ Service is running"
               echo "DEPLOYMENT_STATE=success" >> $GITHUB_OUTPUT
@@ -126,18 +145,24 @@ jobs:
       - name: Deployment Summary
         if: always()
         run: |
-          if [ "${{ steps.check_deployment.outputs.DEPLOYMENT_STATE }}" = "success" ]; then
+          STATE="${{ steps.check_deployment.outputs.DEPLOYMENT_STATE }}"
+          if [ "$STATE" = "success" ]; then
             echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Server:** ${{ secrets.SSH_HOST }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Server:** ${{ secrets.SSH_HOST }}" \
+              >> $GITHUB_STEP_SUMMARY
             echo "**Service Status:** RUNNING" >> $GITHUB_STEP_SUMMARY
-            echo "**Deployed at:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+            echo "**Deployed at:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" \
+              >> $GITHUB_STEP_SUMMARY
           else
             echo "### ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Server:** ${{ secrets.SSH_HOST }}" >> $GITHUB_STEP_SUMMARY
-            echo "**Service Status:** NOT RUNNING" >> $GITHUB_STEP_SUMMARY
-            echo "**Failed at:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+            echo "**Server:** ${{ secrets.SSH_HOST }}" \
+              >> $GITHUB_STEP_SUMMARY
+            echo "**Service Status:** NOT RUNNING" \
+              >> $GITHUB_STEP_SUMMARY
+            echo "**Failed at:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" \
+              >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Cleanup SSH key
