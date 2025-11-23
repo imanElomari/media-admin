@@ -57,7 +57,8 @@ This project includes automated deployment to remote servers via SSH using GitHu
 3. Push to `main` or `production` branch
 4. Automatic deployment triggers and reports status
 
-**Full Documentation:** See [Deployment Guide](docs/deployment/DEPLOYMENT.md)
+**Quick Start:** See [Quick Start Guide](docs/deployment/QUICKSTART.md) (15 minutes)  
+**Full Documentation:** See [Complete Deployment Guide](docs/deployment/DEPLOYMENT.md)
 
 **Required GitHub Secrets:**
 - `SSH_HOST` - Remote server hostname/IP
