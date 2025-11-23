@@ -8,38 +8,26 @@ By default, the application displays either "Postiz" or "Gitroom" in page titles
 
 ## Usage
 
-### Option 1: Docker Compose (Recommended)
+### Option 1: Environment File (Recommended for Docker)
 
-Set the `BRAND_TITLE` and `BRAND_LOGO` build arguments in your docker-compose file:
+Add branding variables to your environment file (e.g., `.env.atlasimex`):
+
+```env
+NEXT_PUBLIC_BRAND_TITLE="My Custom App Name"
+NEXT_PUBLIC_BRAND_LOGO="/path/to/your/logo.svg"
+```
+
+Then reference the env file in your docker-compose:
 
 ```yaml
 services:
   your-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-      args:
-        BRAND_TITLE: "My Custom App Name"
-        BRAND_LOGO: "/path/to/your/logo.svg"
+    image: postiz-app:latest
+    env_file:
+      - .env.atlasimex
 ```
 
-Example from the project's `docker-compose.dev.yaml`:
-
-```yaml
-postiz-atlasimex:
-  build:
-    context: .
-    dockerfile: Dockerfile.dev
-    args:
-      BRAND_TITLE: "${BRAND_TITLE:-Atlasimex Media}"
-      BRAND_LOGO: "${BRAND_LOGO:-branding/atlasimex.png}"
-```
-
-You can then set both environment variables when running docker compose:
-
-```bash
-BRAND_TITLE="My Custom App" BRAND_LOGO="/my-logo.svg" docker compose up
-```
+**Note:** The Docker setup now uses a single image for multiple instances. Each instance loads its branding from its own environment file at runtime. See [DOCKER_SETUP.md](DOCKER_SETUP.md) for more details.
 
 ### Option 2: Environment Variables
 
