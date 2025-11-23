@@ -53,8 +53,7 @@ export const LayoutSettings = ({ children }: { children: ReactNode }) => {
   const fetch = useFetch();
   const t = useT();
 
-  const { isGeneral, brandLogo } = useVariables();
-  const { backendUrl, billingEnabled } = useVariables();
+  const { isGeneral, brandLogo, backendUrl, billingEnabled } = useVariables();
   const searchParams = useSearchParams();
   const load = useCallback(async (path: string) => {
     return await (await fetch(path)).json();
@@ -96,7 +95,7 @@ export const LayoutSettings = ({ children }: { children: ReactNode }) => {
               >
                 <div className="min-w-[55px]">
                   <Image
-                    src={brandLogo || (isGeneral ? '/postiz.svg' : '/logo.svg')}
+                    src={brandLogo}
                     width={55}
                     height={53}
                     alt="Logo"
