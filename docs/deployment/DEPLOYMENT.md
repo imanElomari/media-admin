@@ -1,6 +1,6 @@
-# SSH Deployment Guide
+# SSH Deployment Guide with Docker Compose
 
-This guide explains how to set up automated deployment to your server via SSH using GitHub Actions.
+This guide explains how to set up automated deployment to your server via SSH using GitHub Actions and Docker Compose.
 
 ## Overview
 
@@ -8,8 +8,8 @@ The deployment workflow automatically:
 1. Builds your application when code is pushed to `main` or `production` branches
 2. Connects to your remote server via SSH
 3. Syncs the codebase using rsync
-4. Installs dependencies and builds the application
-5. Restarts the Supervisor service to apply changes
+4. Builds Docker images on the remote server
+5. Restarts Docker Compose services to apply changes
 6. Reports deployment status back to GitHub Actions
 
 ## Prerequisites
@@ -18,19 +18,25 @@ The deployment workflow automatically:
 
 1. **Install required software:**
    ```bash
-   # Install Node.js 22.12.0
-   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-   sudo apt-get install -y nodejs
-
-   # Install pnpm
-   sudo npm install -g pnpm@10.6.1
-
-   # Install Supervisor
+   # Update system
    sudo apt-get update
-   sudo apt-get install -y supervisor
+
+   # Install Docker
+   curl -fsSL https://get.docker.com -o get-docker.sh
+   sudo sh get-docker.sh
+   
+   # Add your user to docker group (to run docker without sudo)
+   sudo usermod -aG docker $USER
+   
+   # Install Docker Compose (if not already included)
+   sudo apt-get install -y docker-compose-plugin
 
    # Install rsync (if not already installed)
    sudo apt-get install -y rsync
+   
+   # Verify installations
+   docker --version
+   docker compose version
    ```
 
 2. **Setup SSH access:**
@@ -42,44 +48,45 @@ The deployment workflow automatically:
    ssh-copy-id -i ~/.ssh/github_deploy_key.pub your-user@your-server
    ```
 
-3. **Configure Supervisor:**
+3. **Setup deployment directory:**
+   ```bash
+   # Create deployment directory
+   sudo mkdir -p /var/www/postiz
+   sudo chown $USER:$USER /var/www/postiz
+   cd /var/www/postiz
+   ```
+
+4. **Setup environment file:**
    
-   Copy the `supervisor.conf` file from this directory to your server:
+   Create a `.env` file in your deployment directory with your production settings:
    ```bash
-   sudo cp docs/deployment/supervisor.conf /etc/supervisor/conf.d/postiz.conf
+   cd /var/www/postiz
+   nano .env
    ```
 
-   Edit the file to match your setup:
-   ```bash
-   sudo nano /etc/supervisor/conf.d/postiz.conf
-   ```
-
-   Update these values:
-   - `directory=/path/to/your/deployment` - Change to your actual deployment path
-   - `user=www-data` - Change to your deployment user if different
-   - Environment variables in the `environment=` lines
-
-   Reload Supervisor:
-   ```bash
-   sudo supervisorctl reread
-   sudo supervisorctl update
-   ```
-
-4. **Grant sudo permissions for Supervisor (optional but recommended):**
+   Add your environment variables (see `.env.example` for reference):
+   ```env
+   # Database
+   DATABASE_URL=postgresql://media_admin:admin1234!@postiz-postgres:5432/media_db
    
-   Create a sudoers file to allow your deployment user to restart Supervisor without password:
-   ```bash
-   sudo visudo -f /etc/sudoers.d/deploy-supervisor
+   # Redis
+   REDIS_URL=redis://postiz-redis:6379
+   
+   # Add other required environment variables
+   NODE_ENV=production
+   NEXT_PUBLIC_VERSION=1.0.0
+   # ... etc
    ```
 
-   Add this line (replace `your-user` with your deployment username):
-   ```
-   your-user ALL=(ALL) NOPASSWD: /usr/bin/supervisorctl restart postiz*, /usr/bin/supervisorctl start postiz*, /usr/bin/supervisorctl stop postiz*, /usr/bin/supervisorctl status postiz*
-   ```
-
-   Save and exit. Test with:
+5. **Choose the right docker-compose file:**
+   
+   For production deployment, use `docker-compose.prod.yaml` or customize it:
    ```bash
-   sudo supervisorctl status
+   # Option 1: Use production compose file
+   ln -sf docker-compose.prod.yaml docker-compose.yaml
+   
+   # Option 2: Use the dev compose file with multiple instances
+   ln -sf docker-compose.dev.yaml docker-compose.yaml
    ```
 
 ## GitHub Secrets Configuration
@@ -99,7 +106,6 @@ Add the following secrets to your GitHub repository:
 | `SSH_USER` | SSH username for deployment | `deploy` or `ubuntu` |
 | `SSH_PRIVATE_KEY` | SSH private key for authentication | Contents of `~/.ssh/github_deploy_key` |
 | `DEPLOY_PATH` | Target deployment path on remote server | `/var/www/postiz` |
-| `SUPERVISOR_SERVICE_NAME` | Name of the Supervisor service group | `postiz:*` or `postiz` |
 
 ### Setting SSH_PRIVATE_KEY
 
@@ -144,11 +150,10 @@ You can also trigger deployment manually:
 ### Deploy Job (runs only if build succeeds)
 - Sets up SSH connection
 - Syncs codebase to remote server (excludes: .git, node_modules, dist, .env, uploads, var)
-- Installs dependencies on remote server
-- Generates Prisma client on remote server
-- Builds applications on remote server
-- Restarts Supervisor service
-- Checks service status
+- Builds Docker images on remote server
+- Stops existing containers
+- Starts new containers with Docker Compose
+- Checks service health status
 - Reports deployment status
 
 ## Deployment Status
@@ -156,7 +161,7 @@ You can also trigger deployment manually:
 After deployment completes, you'll see a summary in the GitHub Actions interface showing:
 - ✅ Deployment Successful or ❌ Deployment Failed
 - Server hostname
-- Service status
+- Services status (e.g., 5/5 running)
 - Deployment timestamp
 
 ## Troubleshooting
@@ -173,28 +178,37 @@ chmod 600 ~/.ssh/github_deploy_key
 chmod 644 ~/.ssh/github_deploy_key.pub
 ```
 
-### Supervisor Issues
+### Docker Compose Issues
 
-Check Supervisor logs:
+Check Docker Compose logs:
 ```bash
 # Check service status
-sudo supervisorctl status postiz:*
+cd /var/www/postiz
+docker compose ps
 
-# View logs
-sudo tail -f /var/log/supervisor/postiz-backend.log
-sudo tail -f /var/log/supervisor/postiz-backend-error.log
+# View logs for all services
+docker compose logs
+
+# View logs for specific service
+docker compose logs postiz-app
+docker compose logs postiz-postgres
+docker compose logs postiz-redis
 
 # Restart manually
-sudo supervisorctl restart postiz:*
+docker compose restart
+
+# Rebuild and restart
+docker compose up -d --build
 ```
 
 ### Build Issues on Server
 
 Check for:
-- Sufficient disk space: `df -h`
-- Sufficient memory: `free -h`
-- Node.js version: `node --version` (should be 22.12.0)
-- pnpm version: `pnpm --version` (should be 10.6.1)
+- Sufficient disk space: `df -h` (Docker images can be large)
+- Sufficient memory: `free -h` (building requires memory)
+- Docker version: `docker --version`
+- Docker Compose version: `docker compose version`
+- Docker service running: `sudo systemctl status docker`
 
 ### Deployment Hanging
 
@@ -242,14 +256,21 @@ Edit the workflow file (`.github/workflows/deploy-ssh.yml`) to customize:
 - Environment variables
 - Deployment paths
 
-### Using PM2 Instead of Supervisor
+### Using Different Docker Compose Files
 
-If you prefer PM2 over Supervisor, modify the deployment step to use PM2 commands:
-```bash
-# Instead of supervisorctl
-pm2 restart all
-pm2 status
-```
+You can customize which docker-compose file to use:
+
+1. **Single instance (production):** Use `docker-compose.prod.yaml`
+   ```bash
+   ln -sf docker-compose.prod.yaml docker-compose.yaml
+   ```
+
+2. **Multiple instances (dev/multi-tenant):** Use `docker-compose.dev.yaml`
+   ```bash
+   ln -sf docker-compose.dev.yaml docker-compose.yaml
+   ```
+
+3. **Custom setup:** Create your own `docker-compose.yaml` based on your needs
 
 ## Support
 

@@ -98,20 +98,18 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
 
-            echo "📦 Installing dependencies..."
-            pnpm install --frozen-lockfile
+            echo "🐳 Building Docker images..."
+            docker compose build --no-cache
 
-            echo "🔨 Generating Prisma client..."
-            pnpm run prisma-generate
+            echo "🔄 Stopping existing containers..."
+            docker compose down
 
-            echo "🏗️ Building application..."
-            NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
+            echo "🚀 Starting containers..."
+            docker compose up -d
 
-            echo "🔄 Restarting Supervisor service..."
-            sudo supervisorctl restart \
-              ${{ secrets.SUPERVISOR_SERVICE_NAME }} || \
-              sudo supervisorctl start \
-              ${{ secrets.SUPERVISOR_SERVICE_NAME }}
+            echo "⏳ Waiting for services to be healthy..."
+            sleep 10
+            docker compose ps
 
             echo "✅ Deployment completed successfully"
           ENDSSH
@@ -126,18 +124,24 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
 
-            echo "Checking Supervisor service status..."
-            SERVICE_STATUS=$(sudo supervisorctl status \
-              ${{ secrets.SUPERVISOR_SERVICE_NAME }} | awk '{print $2}')
-            echo "SERVICE_STATUS=$SERVICE_STATUS" >> $GITHUB_OUTPUT
+            echo "Checking Docker Compose services status..."
+            RUNNING_COUNT=$(docker compose ps --services \
+              --filter "status=running" | wc -l)
+            TOTAL_COUNT=$(docker compose ps --services | wc -l)
 
-            if [ "$SERVICE_STATUS" = "RUNNING" ]; then
-              echo "✅ Service is running"
+            echo "RUNNING_COUNT=$RUNNING_COUNT" >> $GITHUB_OUTPUT
+            echo "TOTAL_COUNT=$TOTAL_COUNT" >> $GITHUB_OUTPUT
+
+            if [ "$RUNNING_COUNT" -eq "$TOTAL_COUNT" ] && \
+               [ "$RUNNING_COUNT" -gt 0 ]; then
+              echo "✅ All services are running ($RUNNING_COUNT/$TOTAL_COUNT)"
               echo "DEPLOYMENT_STATE=success" >> $GITHUB_OUTPUT
+              docker compose ps
               exit 0
             else
-              echo "❌ Service is not running: $SERVICE_STATUS"
+              echo "❌ Some services failed ($RUNNING_COUNT/$TOTAL_COUNT)"
               echo "DEPLOYMENT_STATE=failed" >> $GITHUB_OUTPUT
+              docker compose ps
               exit 1
             fi
           ENDSSH
@@ -146,12 +150,15 @@ jobs:
         if: always()
         run: |
           STATE="${{ steps.check_deployment.outputs.DEPLOYMENT_STATE }}"
+          RUNNING="${{ steps.check_deployment.outputs.RUNNING_COUNT }}"
+          TOTAL="${{ steps.check_deployment.outputs.TOTAL_COUNT }}"
           if [ "$STATE" = "success" ]; then
             echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Server:** ${{ secrets.SSH_HOST }}" \
               >> $GITHUB_STEP_SUMMARY
-            echo "**Service Status:** RUNNING" >> $GITHUB_STEP_SUMMARY
+            echo "**Services:** ${RUNNING}/${TOTAL} running" \
+              >> $GITHUB_STEP_SUMMARY
             echo "**Deployed at:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" \
               >> $GITHUB_STEP_SUMMARY
           else
@@ -159,7 +166,7 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Server:** ${{ secrets.SSH_HOST }}" \
               >> $GITHUB_STEP_SUMMARY
-            echo "**Service Status:** NOT RUNNING" \
+            echo "**Services:** ${RUNNING}/${TOTAL} running" \
               >> $GITHUB_STEP_SUMMARY
             echo "**Failed at:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" \
               >> $GITHUB_STEP_SUMMARY

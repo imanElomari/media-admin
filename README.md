@@ -47,12 +47,12 @@ pnpm run pm2
 
 ## Deployment
 
-### Automated SSH Deployment
+### Automated SSH Deployment with Docker Compose
 
-This project includes automated deployment to remote servers via SSH using GitHub Actions and Supervisor.
+This project includes automated deployment to remote servers via SSH using GitHub Actions and Docker Compose.
 
 **Quick Start:**
-1. Set up your server with Node.js, pnpm, and Supervisor
+1. Set up your server with Docker and Docker Compose
 2. Configure GitHub Secrets (SSH credentials, deploy path)
 3. Push to `main` or `production` branch
 4. Automatic deployment triggers and reports status
@@ -65,12 +65,19 @@ This project includes automated deployment to remote servers via SSH using GitHu
 - `SSH_USER` - SSH username
 - `SSH_PRIVATE_KEY` - SSH private key
 - `DEPLOY_PATH` - Target path on server
-- `SUPERVISOR_SERVICE_NAME` - Supervisor service name
+
+**Deployment Process:**
+1. Build verification in GitHub Actions
+2. SSH connection to remote server
+3. Codebase sync via rsync
+4. Docker Compose build and restart
+5. Health check verification
+6. Deployment status report
 
 For detailed setup instructions, see:
 - [Complete Deployment Guide](docs/deployment/DEPLOYMENT.md)
 - [GitHub Secrets Reference](docs/deployment/SECRETS.md)
-- [Supervisor Configuration](docs/deployment/supervisor.conf)
+- [Production Docker Compose](docker-compose.prod.yaml)
 
 ## Project Structure
 

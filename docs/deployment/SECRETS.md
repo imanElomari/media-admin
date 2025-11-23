@@ -54,25 +54,16 @@ sudo mkdir -p /var/www/postiz
 sudo chown your-user:your-user /var/www/postiz
 ```
 
-### SUPERVISOR_SERVICE_NAME
-**Description:** Name of the Supervisor service or service group  
-**Example:** `postiz:*` (for group), `postiz-backend` (for single service)  
-**How to get:** From your Supervisor configuration file
 
-**Check on server:**
-```bash
-# List all Supervisor services
-sudo supervisorctl status
-
-# If using the provided config, use: postiz:*
-```
 
 ## Quick Setup Checklist
 
 - [ ] Generate SSH key pair
 - [ ] Copy public key to server
 - [ ] Create deployment directory on server
-- [ ] Install and configure Supervisor
+- [ ] Install Docker and Docker Compose
+- [ ] Setup environment file (.env) on server
+- [ ] Choose and link appropriate docker-compose file
 - [ ] Test SSH connection manually
 - [ ] Add all secrets to GitHub repository
 - [ ] Test deployment with manual workflow trigger
@@ -86,9 +77,9 @@ After adding all secrets, test the configuration:
 ssh -i ~/.ssh/github_deploy_key your-user@your-server "echo 'Connection successful'"
 ```
 
-2. **Test Supervisor status:**
+2. **Test Docker access:**
 ```bash
-ssh -i ~/.ssh/github_deploy_key your-user@your-server "sudo supervisorctl status"
+ssh -i ~/.ssh/github_deploy_key your-user@your-server "docker ps && docker compose version"
 ```
 
 3. **Trigger manual deployment:**
@@ -110,9 +101,7 @@ ssh -i ~/.ssh/github_deploy_key your-user@your-server "sudo supervisorctl status
 ❌ Wrong: SSH key with wrong permissions (644, 755)  
 ✅ Correct: SSH key with 600 permissions on server
 
-### Service Name
-❌ Wrong: Using wrong service name that doesn't exist  
-✅ Correct: Check actual service name with `sudo supervisorctl status`
+
 
 ## Security Notes
 
