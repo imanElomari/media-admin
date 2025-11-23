@@ -35,14 +35,12 @@ services:
       timeout: 3s
       retries: 3
 
-  # --- Atlasimex ---
+  # --- Postiz App (Single image, multiple instances) ---
   postiz-atlasimex:
     build:
       context: .
       dockerfile: Dockerfile.dev
-      args:
-        BRAND_TITLE: "${BRAND_TITLE:-Atlasimex Media}"
-        BRAND_LOGO: "${BRAND_LOGO:-branding/atlasimex.png}"
+    image: postiz-app:latest
     container_name: postiz-atlasimex
     restart: always
     env_file:
@@ -53,14 +51,8 @@ services:
       - postiz-postgres
       - postiz-redis
 
-  # --- Promax ---
   postiz-promax:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-      args:
-        BRAND_TITLE: "${BRAND_TITLE:-Promax Media}"
-        BRAND_LOGO: "${BRAND_LOGO:-branding/promax.png}"
+    image: postiz-app:latest
     container_name: postiz-promax
     restart: always
     env_file:
@@ -71,14 +63,8 @@ services:
       - postiz-postgres
       - postiz-redis
 
-  # --- X6Drinks ---
   postiz-x6drinks:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-      args:
-        BRAND_TITLE: "${BRAND_TITLE:-X6Drinks Media}"
-        BRAND_LOGO: "${BRAND_LOGO:-branding/x6drinks.png}"
+    image: postiz-app:latest
     container_name: postiz-x6drinks
     restart: always
     env_file:
