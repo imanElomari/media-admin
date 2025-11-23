@@ -107,10 +107,9 @@ ssh -i ~/.ssh/github_deploy_key your-user@your-server "docker ps && docker compo
 
 1. **Never commit private keys** - Only add them as GitHub Secrets
 2. **Use dedicated deployment user** - Don't use root or personal accounts
-3. **Restrict SSH key** - Use `authorized_keys` options to limit key usage:
-   ```
-   from="github-actions-ip",command="/usr/bin/supervisorctl" ssh-ed25519 AAAA...
-   ```
+3. **Restrict SSH key** - Use `authorized_keys` options to limit key usage if needed
+   - Ensure deployment user is in the `docker` group to run Docker commands
+   - Consider using SSH key restrictions for specific commands only
 4. **Rotate keys regularly** - Update deployment keys every few months
 5. **Monitor access logs** - Check `/var/log/auth.log` for suspicious activity
 
@@ -125,5 +124,5 @@ To update a secret:
 ## See Also
 
 - [Full Deployment Guide](DEPLOYMENT.md) - Complete setup instructions
-- [Supervisor Configuration](supervisor.conf) - Example Supervisor config
+- [Production Docker Compose](../../docker-compose.prod.yaml) - Production configuration
 - [Main README](../../README.md) - Project documentation

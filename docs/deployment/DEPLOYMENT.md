@@ -233,11 +233,12 @@ nano .env
 
 1. **Use a dedicated deployment user** - Don't deploy as root
 2. **Restrict SSH key permissions** - Use `chmod 600` on private keys
-3. **Limit sudo access** - Only grant necessary Supervisor permissions
+3. **Add user to docker group** - `sudo usermod -aG docker $USER` to run Docker without sudo
 4. **Use firewall rules** - Restrict SSH access to known IPs if possible
 5. **Rotate SSH keys regularly** - Update deployment keys periodically
-6. **Monitor logs** - Set up log monitoring and alerting
+6. **Monitor logs** - Set up log monitoring and alerting with Docker Compose logs
 7. **Keep secrets secure** - Never commit `.env` or private keys to git
+8. **Secure Docker socket** - Ensure proper permissions on `/var/run/docker.sock`
 
 ## Advanced Configuration
 
@@ -277,8 +278,9 @@ You can customize which docker-compose file to use:
 For issues or questions:
 1. Check the [main README](../../README.md)
 2. Review GitHub Actions logs for detailed error messages
-3. Check server logs in `/var/log/supervisor/`
-4. Open an issue on GitHub
+3. Check Docker Compose logs: `docker compose logs -f`
+4. Inspect service status: `docker compose ps`
+5. Open an issue on GitHub
 
 ## License
 
