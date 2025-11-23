@@ -69,6 +69,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           disableXAnalytics={!!process.env.DISABLE_X_ANALYTICS}
           sentryDsn={process.env.NEXT_PUBLIC_SENTRY_DSN!}
           language={allHeaders.get(headerName)}
+          brandTitle={process.env.NEXT_PUBLIC_BRAND_TITLE || (process.env.IS_GENERAL ? 'Postiz' : 'Gitroom')}
+          brandLogo={process.env.NEXT_PUBLIC_BRAND_LOGO || (process.env.IS_GENERAL ? '/postiz.svg' : '/logo.svg')}
           transloadit={
             process.env.TRANSLOADIT_AUTH && process.env.TRANSLOADIT_TEMPLATE
               ? [

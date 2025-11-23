@@ -2,6 +2,7 @@ import { internalFetch } from '@gitroom/helpers/utils/internal.fetch';
 export const dynamic = 'force-dynamic';
 import { Metadata } from 'next';
 import { getAppName } from '@gitroom/helpers/utils/get.app.name';
+import { getAppLogo } from '@gitroom/helpers/utils/get.app.logo';
 import Image from 'next/image';
 import Link from 'next/link';
 import { CommentsComponents } from '@gitroom/frontend/components/preview/comments.components';
@@ -58,7 +59,7 @@ export default async function Auth({
                 >
                   <div className="max-w-[55px]">
                     <Image
-                      src={'/postiz.svg'}
+                      src={getAppLogo()}
                       width={55}
                       height={55}
                       alt="Logo"
