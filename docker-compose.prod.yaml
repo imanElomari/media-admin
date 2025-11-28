@@ -1,0 +1,70 @@
+services:
+  # --- PostgreSQL Database ---
+  postiz-postgres:
+    image: postgres:17-alpine
+    container_name: postiz-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-media_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin1234!}
+      POSTGRES_DB: ${POSTGRES_DB:-media_db}
+    volumes:
+      - postgres-volume:/var/lib/postgresql/data
+    networks:
+      - postiz-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-media_admin} -d ${POSTGRES_DB:-media_db}"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # --- Redis ---
+  postiz-redis:
+    image: redis:7.2
+    container_name: postiz-redis
+    restart: always
+    volumes:
+      - postiz-redis-data:/data
+    networks:
+      - postiz-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # --- Postiz App ---
+  postiz-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: postiz-app:latest
+    container_name: postiz-app
+    restart: always
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    networks:
+      - postiz-network
+    depends_on:
+      postiz-postgres:
+        condition: service_healthy
+      postiz-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+# --- Volumes ---
+volumes:
+  postgres-volume:
+  postiz-redis-data:
+
+# --- Network ---
+networks:
+  postiz-network:
+    driver: bridge

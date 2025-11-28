@@ -1,0 +1,180 @@
+---
+name: "Deploy to Server via SSH"
+
+"on":
+  push:
+    branches:
+      - main
+      - production
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.1
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate Prisma Client
+        run: pnpm run prisma-generate
+
+      - name: Build applications
+        run: pnpm run build
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
+      - name: Build status
+        run: |
+          echo "✅ Build completed successfully"
+          echo "BUILD_STATUS=success" >> $GITHUB_ENV
+
+  deploy:
+    name: Deploy to Remote Server
+    needs: build
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.SSH_PORT || 22 }} \
+            -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -p ${{ secrets.SSH_PORT || 22 }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "echo 'SSH connection successful'"
+
+      - name: Sync codebase to remote server
+        run: |
+          DEPLOY_TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
+          DEPLOY_TARGET="${DEPLOY_TARGET}:${{ secrets.DEPLOY_PATH }}/"
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key \
+              -p ${{ secrets.SSH_PORT || 22 }} \
+              -o StrictHostKeyChecking=no" \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude 'dist' \
+            --exclude '.env' \
+            --exclude 'uploads' \
+            --exclude 'var' \
+            ./ "${DEPLOY_TARGET}"
+
+      - name: Deploy on remote server
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -p ${{ secrets.SSH_PORT || 22 }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            echo "🐳 Building Docker images..."
+            docker compose build
+
+            echo "🔄 Stopping existing containers..."
+            docker compose down
+
+            echo "🚀 Starting containers..."
+            docker compose up -d
+
+            echo "⏳ Waiting for services to be healthy..."
+            sleep 10
+            docker compose ps
+
+            echo "✅ Deployment completed successfully"
+          ENDSSH
+
+      - name: Check deployment status
+        id: check_deployment
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -p ${{ secrets.SSH_PORT || 22 }} \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            echo "Checking Docker Compose services status..."
+            RUNNING_COUNT=$(docker compose ps --services \
+              --filter "status=running" | wc -l)
+            TOTAL_COUNT=$(docker compose ps --services | wc -l)
+
+            echo "RUNNING_COUNT=$RUNNING_COUNT" >> $GITHUB_OUTPUT
+            echo "TOTAL_COUNT=$TOTAL_COUNT" >> $GITHUB_OUTPUT
+
+            if [ "$RUNNING_COUNT" -eq "$TOTAL_COUNT" ] && \
+               [ "$RUNNING_COUNT" -gt 0 ]; then
+              echo "✅ All services are running ($RUNNING_COUNT/$TOTAL_COUNT)"
+              echo "DEPLOYMENT_STATE=success" >> $GITHUB_OUTPUT
+              docker compose ps
+              exit 0
+            else
+              echo "❌ Some services failed ($RUNNING_COUNT/$TOTAL_COUNT)"
+              echo "DEPLOYMENT_STATE=failed" >> $GITHUB_OUTPUT
+              docker compose ps
+              exit 1
+            fi
+          ENDSSH
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          STATE="${{ steps.check_deployment.outputs.DEPLOYMENT_STATE }}"
+          RUNNING="${{ steps.check_deployment.outputs.RUNNING_COUNT }}"
+          TOTAL="${{ steps.check_deployment.outputs.TOTAL_COUNT }}"
+          if [ "$STATE" = "success" ]; then
+            echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Server:** ${{ secrets.SSH_HOST }}" \
+              >> $GITHUB_STEP_SUMMARY
+            echo "**Services:** ${RUNNING}/${TOTAL} running" \
+              >> $GITHUB_STEP_SUMMARY
+            echo "**Deployed at:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" \
+              >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Server:** ${{ secrets.SSH_HOST }}" \
+              >> $GITHUB_STEP_SUMMARY
+            echo "**Services:** ${RUNNING}/${TOTAL} running" \
+              >> $GITHUB_STEP_SUMMARY
+            echo "**Failed at:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" \
+              >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
